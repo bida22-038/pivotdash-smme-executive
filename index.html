@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PivotDash | Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { 
+            --bg: #030712; --card: rgba(17, 24, 39, 0.7); 
+            --accent: #10b981; --border: rgba(255, 255, 255, 0.08);
+            --text: #f8fafc; --input: #1e293b;
+        }
+        .light { 
+            --bg: #f8fafc; --card: rgba(255, 255, 255, 0.9); 
+            --accent: #2563eb; --border: rgba(0, 0, 0, 0.1);
+            --text: #0f172a; --input: #e2e8f0;
+        }
+        body { 
+            background: var(--bg); color: var(--text); 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-card { 
+            background: var(--card); backdrop-filter: blur(20px); 
+            border: 1px solid var(--border); border-radius: 20px;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: scale(1.05); }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 md:p-8 overflow-hidden">
+    
+    <nav class="flex justify-between items-center mb-8 no-print">
+        <div class="flex items-center gap-3">
+            <div class="h-12 w-12 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <i data-lucide="layout-dashboard" class="text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-tighter italic leading-none">PIVOTDASH</h1>
+                <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">SMME Intelligence</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-4 items-center">
+            <button onclick="toggleTheme()" class="p-3 glass-card hover:border-emerald-500 transition-all">
+                <i data-lucide="palette" class="w-5 h-5"></i>
+            </button>
+            <button onclick="downloadPDF()" class="btn-primary flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Export Report
+            </button>
+        </div>
+    </nav>
+
+    <div id="dashboard-content" class="flex flex-1 gap-6 overflow-hidden">
+        
+        <div class="flex-[2.5] flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+            
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-5 border-l-4 border-emerald-500">
+                    <p class="text-[10px] font-bold opacity-50 uppercase mb-2">Total Sales</p>
+                    <h2 id="kpi-rev" class="text-2xl font-black">--</h2>
+                </div>
+                <div class="glass-card p-5 border-l-4 border-blue-500">
+                    <p class="text-[10px] font-bold opacity-50 uppercase mb-2">Cycle Speed</p>
+                    <h2 id="kpi-vel" class="text-2xl font-black">--</h2>
+                </div>
+                <div class="glass-card p-5 border-l-4 border-purple-500">
+                    <p class="text-[10px] font-bold opacity-50 uppercase mb-2">Lead Source</p>
+                    <h2 id="kpi-lead" class="text-lg font-black text-emerald-400">--</h2>
+                </div>
+                <div class="glass-card p-5 border-l-4 border-orange-500">
+                    <p class="text-[10px] font-bold opacity-50 uppercase mb-2">Win Rate</p>
+                    <h2 id="kpi-win" class="text-2xl font-black">--</h2>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-6 min-h-[350px] flex flex-col">
+                    <div class="flex justify-between items-center mb-6 no-print">
+                        <h3 class="text-xs font-bold uppercase tracking-widest opacity-70">Revenue Trend</h3>
+                        <select onchange="changeType('time', this.value)" class="bg-transparent text-[10px] font-bold border border-white/10 rounded-lg px-2 py-1">
+                            <option value="line">Line Graph</option>
+                            <option value="bar">Bar Chart</option>
+                        </select>
+                    </div>
+                    <div class="flex-1"><canvas id="timeChart"></canvas></div>
+                </div>
+
+                <div class="glass-card p-6 min-h-[350px] flex flex-col">
+                    <div class="flex justify-between items-center mb-6 no-print">
+                        <h3 class="text-xs font-bold uppercase tracking-widest opacity-70">Regional Split</h3>
+                        <select onchange="changeType('region', this.value)" class="bg-transparent text-[10px] font-bold border border-white/10 rounded-lg px-2 py-1">
+                            <option value="bar">Bar</option>
+                            <option value="doughnut">Doughnut</option>
+                        </select>
+                    </div>
+                    <div class="flex-1"><canvas id="regionChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col gap-6 min-w-[320px]">
+            <div class="glass-card flex-1 flex flex-col p-6 border-emerald-500/20">
+                <div class="flex items-center gap-2 mb-6">
+                    <i data-lucide="edit-3" class="text-emerald-500 w-5 h-5"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-widest">Executive Summary</h3>
+                </div>
+                <textarea id="notepad" class="flex-1 bg-transparent border-none focus:ring-0 text-sm leading-relaxed text-slate-400 resize-none overflow-y-auto" 
+                placeholder="The SME sector in the North is showing 12% WoW growth. Suggest reallocating Alice to Enterprise accounts while Diana handles the North expansion."></textarea>
+                
+                <div class="mt-4 pt-4 border-t border-white/5 no-print">
+                    <p class="text-[9px] opacity-40 uppercase font-bold italic text-center">Auto-sync active</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstances = {};
+        let rawData = {};
+
+        async function init() {
+            try {
+                const res = await fetch('./data.json');
+                rawData = await res.json();
+                
+                document.getElementById('kpi-rev').innerText = rawData.kpis.total_revenue;
+                document.getElementById('kpi-vel').innerText = rawData.kpis.avg_velocity;
+                document.getElementById('kpi-lead').innerText = Object.keys(rawData.charts.leads)[0]; // Top lead source
+                document.getElementById('kpi-win').innerText = rawData.kpis.win_rate;
+
+                createCharts();
+                lucide.createIcons();
+            } catch(e) { console.error("Verify data.json is in the same folder."); }
+        }
+
+        function createCharts() {
+            const ctx1 = document.getElementById('timeChart');
+            chartInstances.time = new Chart(ctx1, {
+                type: 'line',
+                data: { 
+                    labels: rawData.charts.time_series.labels, 
+                    datasets: [{ 
+                        data: rawData.charts.time_series.values, 
+                        borderColor: '#10b981', 
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }] 
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const ctx2 = document.getElementById('regionChart');
+            chartInstances.region = new Chart(ctx2, {
+                type: 'bar',
+                data: { 
+                    labels: Object.keys(rawData.charts.regions), 
+                    datasets: [{ 
+                        data: Object.values(rawData.charts.regions), 
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'],
+                        borderRadius: 10
+                    }] 
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function changeType(chartId, type) {
+            const chart = chartInstances[chartId];
+            const ctx = chart.canvas.getContext('2d');
+            const data = chart.data;
+            const options = chart.options;
+            
+            chart.destroy();
+            chartInstances[chartId] = new Chart(ctx, { type: type, data: data, options: options });
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light');
+            const isLight = document.body.classList.contains('light');
+            // Update chart colors for contrast
+            chartInstances.time.options.scales.x.ticks.color = isLight ? '#64748b' : '#94a3b8';
+            chartInstances.time.update();
+        }
+
+        function downloadPDF() {
+            const element = document.getElementById('dashboard-content');
+            const opt = {
+                margin:       0.5,
+                filename:     'PivotDash_Executive_Report.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, backgroundColor: getComputedStyle(document.body).backgroundColor },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        init();
+    </script>
+</body>
+</html>
