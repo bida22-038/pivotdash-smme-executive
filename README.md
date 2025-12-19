@@ -1,4 +1,4 @@
-# PivotDash SMME | Executive Intelligence MVP
+# PivotDash MVP 1 for SMME Executive Intelligence
 
 **PivotDash** aims to be a high-performance analytics engine designed for SMME Sales Executives who need instant insights without the complexity of Power BI.
 
